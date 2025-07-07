@@ -13,7 +13,7 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
-  const [showDemo, setShowDemo] = useState(true); // Show demo by default for new users
+  const [showDemo, setShowDemo] = useState(true);
   const [isFirstVisit, setIsFirstVisit] = useState(true);
 
   // Demo suggestions for users - Wayfinders pattern
@@ -77,6 +77,42 @@ export function App() {
 
   const [visibleColumns, setVisibleColumns] = useState(allColumns);
 
+  // Initialize from URL on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryFromUrl = urlParams.get('q');
+    if (queryFromUrl) {
+      setSearchQuery(queryFromUrl);
+      const result = processNaturalLanguageSearch(queryFromUrl, data);
+      setSearchResult(result);
+      setIsFirstVisit(false);
+      setShowDemo(false);
+    }
+  }, [data]);
+
+  // Listen for browser back/forward events
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryFromUrl = urlParams.get('q') || '';
+      
+      setSearchQuery(queryFromUrl);
+      if (queryFromUrl) {
+        const result = processNaturalLanguageSearch(queryFromUrl, data);
+        setSearchResult(result);
+        setShowDemo(false);
+        setIsFirstVisit(false);
+      } else {
+        setSearchResult(null);
+        setShowDemo(true);
+        setIsFirstVisit(true);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [data]);
+
   // Update column visibility based on search results and filters
   useEffect(() => {
     if (searchResult && searchResult.relevantColumns) {
@@ -100,6 +136,17 @@ export function App() {
     setSearchResult(result);
     setIsFirstVisit(false);
     
+    // Update browser URL and history
+    const url = new URL(window.location);
+    if (query) {
+      url.searchParams.set('q', query);
+      setShowDemo(false);
+    } else {
+      url.searchParams.delete('q');
+      setShowDemo(true);
+    }
+    window.history.pushState({ query }, '', url);
+    
     // Hide demo after first search to reduce clutter
     if (query.length > 0) {
       setShowDemo(false);
@@ -108,11 +155,22 @@ export function App() {
 
   const handleDemoClick = (question: string) => {
     handleSearch(question);
-    setShowDemo(false);
   };
 
   const handleFollowUpClick = (question: string) => {
     handleSearch(question);
+  };
+
+  const handleReset = () => {
+    setSearchQuery('');
+    setSearchResult(null);
+    setShowDemo(true);
+    setIsFirstVisit(true);
+    
+    // Update browser URL
+    const url = new URL(window.location);
+    url.searchParams.delete('q');
+    window.history.pushState({}, '', url);
   };
 
   const displayData = searchResult?.filteredData || data;
@@ -151,17 +209,12 @@ export function App() {
               </div>
             </div>
             <button 
-              onClick={() => {
-                setSearchQuery('');
-                setSearchResult(null);
-                setShowDemo(true);
-              }}
+              onClick={handleReset}
               className="text-2xl font-bold hover:text-blue-200 transition-colors cursor-pointer"
             >
               Provider Data Portal
             </button>
           </div>
-          {/* Removed question mark button as requested */}
         </div>
       </header>
       <main className="container mx-auto py-6 px-4">
@@ -201,7 +254,7 @@ export function App() {
                     onClick={() => handleDemoClick(question)}
                     className="text-left p-3 bg-white border border-blue-300 rounded-lg text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-between group"
                   >
-                    <span className="underline">"{question}"</span>
+                    <span>"{question}"</span>
                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 ))}
@@ -235,7 +288,7 @@ export function App() {
               {!searchQuery && !showDemo && (
                 <button
                   onClick={() => setShowDemo(true)}
-                  className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded underline"
+                  className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
                 >
                   Show examples
                 </button>
@@ -271,7 +324,7 @@ export function App() {
                       <button
                         key={index}
                         onClick={() => handleFollowUpClick(question)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-full hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md group underline"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-full hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md group"
                       >
                         "{question}"
                         <ArrowRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
