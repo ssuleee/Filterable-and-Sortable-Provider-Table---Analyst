@@ -6,7 +6,7 @@ import { mockData } from './utils/data';
 import { processNaturalLanguageSearch } from './utils/searchProcessor';
 import { SqlModal } from './components/SqlModal';
 import { generateSql } from './utils/sqlGenerator';
-import { Bot, Lightbulb, X, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Bot, Lightbulb, X, Sparkles, ArrowRight } from 'lucide-react';
 
 export function App() {
   const [data] = useState(mockData);
@@ -15,8 +15,6 @@ export function App() {
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
   const [showDemo, setShowDemo] = useState(true); // Show demo by default for new users
   const [isFirstVisit, setIsFirstVisit] = useState(true);
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Demo suggestions for users - Wayfinders pattern
   const demoQuestions = [
@@ -102,13 +100,6 @@ export function App() {
     setSearchResult(result);
     setIsFirstVisit(false);
     
-    // Add to search history
-    if (query.length > 0 && query !== searchHistory[searchHistory.length - 1]) {
-      const newHistory = [...searchHistory, query];
-      setSearchHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-    }
-    
     // Hide demo after first search to reduce clutter
     if (query.length > 0) {
       setShowDemo(false);
@@ -122,29 +113,6 @@ export function App() {
 
   const handleFollowUpClick = (question: string) => {
     handleSearch(question);
-  };
-
-  // Navigation functions
-  const goBack = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const previousQuery = searchHistory[newIndex];
-      setSearchQuery(previousQuery);
-      const result = processNaturalLanguageSearch(previousQuery, data);
-      setSearchResult(result);
-    }
-  };
-
-  const goForward = () => {
-    if (historyIndex < searchHistory.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const nextQuery = searchHistory[newIndex];
-      setSearchQuery(nextQuery);
-      const result = processNaturalLanguageSearch(nextQuery, data);
-      setSearchResult(result);
-    }
   };
 
   const displayData = searchResult?.filteredData || data;
@@ -182,7 +150,16 @@ export function App() {
                 </svg>
               </div>
             </div>
-            <h1 className="text-2xl font-bold">Provider Data Portal</h1>
+            <button 
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResult(null);
+                setShowDemo(true);
+              }}
+              className="text-2xl font-bold hover:text-blue-200 transition-colors cursor-pointer"
+            >
+              Provider Data Portal
+            </button>
           </div>
           {/* Removed question mark button as requested */}
         </div>
@@ -224,7 +201,7 @@ export function App() {
                     onClick={() => handleDemoClick(question)}
                     className="text-left p-3 bg-white border border-blue-300 rounded-lg text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-between group"
                   >
-                    <span>"{question}"</span>
+                    <span className="underline">"{question}"</span>
                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 ))}
@@ -238,35 +215,6 @@ export function App() {
               <button onClick={() => setIsSqlModalOpen(true)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 View SQL
               </button>
-              {/* Navigation buttons */}
-              {searchHistory.length > 0 && (
-                <div className="flex space-x-1">
-                  <button
-                    onClick={goBack}
-                    disabled={historyIndex <= 0}
-                    className={`p-2 rounded-md transition-colors ${
-                      historyIndex <= 0
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    title="Go back"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={goForward}
-                    disabled={historyIndex >= searchHistory.length - 1}
-                    className={`p-2 rounded-md transition-colors ${
-                      historyIndex >= searchHistory.length - 1
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    title="Go forward"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
             </div>
             
             {/* AI Search Input - Identifiers pattern */}
@@ -287,7 +235,7 @@ export function App() {
               {!searchQuery && !showDemo && (
                 <button
                   onClick={() => setShowDemo(true)}
-                  className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
+                  className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded underline"
                 >
                   Show examples
                 </button>
@@ -323,7 +271,7 @@ export function App() {
                       <button
                         key={index}
                         onClick={() => handleFollowUpClick(question)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-full hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md group"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-full hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md group underline"
                       >
                         "{question}"
                         <ArrowRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />

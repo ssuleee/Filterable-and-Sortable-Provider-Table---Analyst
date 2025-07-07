@@ -10,6 +10,88 @@ type SearchPattern = {
   relevantColumns?: string[];
   followUpQuestions?: string[];
 };
+
+// Helper function to get available specialties from data
+const getAvailableSpecialties = (data: any[]) => {
+  const specialties = [...new Set(data.map(provider => provider.specialty))];
+  return specialties.slice(0, 3); // Limit to first 3 for UI
+};
+
+// Helper function to get available states from data
+const getAvailableStates = (data: any[]) => {
+  const states = [...new Set(data.flatMap(provider => 
+    [provider.primaryPracticeState, ...provider.otherPracticeStates]))];
+  return states.slice(0, 3); // Limit to first 3 for UI
+};
+
+// Helper function to get available statuses from data
+const getAvailableStatuses = (data: any[]) => {
+  const statuses = [...new Set(data.map(provider => provider.attestationStatus))];
+  return statuses;
+};
+
+// Smart follow-up question generator based on available data
+const generateContextualFollowUps = (query: string, data: any[], currentColumns: string[]) => {
+  const followUps = [];
+  const specialties = getAvailableSpecialties(data);
+  const states = getAvailableStates(data);
+  const statuses = getAvailableStatuses(data);
+
+  // If we can show attestation status, suggest status-based queries
+  if (data.some(p => p.attestationStatus)) {
+    if (!query.toLowerCase().includes('active') && statuses.includes('Active')) {
+      followUps.push('Show only active providers');
+    }
+    if (!query.toLowerCase().includes('pending') && statuses.includes('Pending')) {
+      followUps.push('Show pending attestations');
+    }
+    if (!query.toLowerCase().includes('expired') && statuses.includes('Expired')) {
+      followUps.push('Show expired providers');
+    }
+  }
+
+  // If we can show specialties, suggest specialty-based queries
+  if (data.some(p => p.specialty) && !query.toLowerCase().includes('specialist')) {
+    if (specialties.includes('Cardiology')) {
+      followUps.push('Show cardiologists only');
+    }
+    if (specialties.includes('Urologist')) {
+      followUps.push('Show urologists only');
+    }
+  }
+
+  // If we can show states, suggest location-based queries
+  if (data.some(p => p.primaryPracticeState)) {
+    if (!query.toLowerCase().includes('california') && states.includes('CA')) {
+      followUps.push('Show providers in California');
+    }
+    if (!query.toLowerCase().includes('texas') && states.includes('TX')) {
+      followUps.push('Show providers in Texas');
+    }
+  }
+
+  // If we can show attestation dates, suggest date-based queries
+  if (data.some(p => p.lastAttestationDate)) {
+    if (!query.toLowerCase().includes('recent') && !query.toLowerCase().includes('7 days')) {
+      followUps.push('Who attested in the last 7 days?');
+    }
+    if (!query.toLowerCase().includes('recent') && !query.toLowerCase().includes('30 days')) {
+      followUps.push('Show attestations from last 30 days');
+    }
+  }
+
+  // Combination queries if multiple identifiers are available
+  if (data.some(p => p.attestationStatus) && data.some(p => p.specialty)) {
+    followUps.push('Show active specialists by type');
+  }
+
+  if (data.some(p => p.attestationStatus) && data.some(p => p.primaryPracticeState)) {
+    followUps.push('Find active providers by state');
+  }
+
+  return followUps.slice(0, 4); // Limit to 4 suggestions
+};
+
 const searchPatterns: SearchPattern[] = [{
   patterns: ['which providers have recently attested', 'who recently attested', 'recent attestation', 'recently attested', 'attested recently', 'new attestations', 'latest attestations', 'providers who attested recently'],
   filter: provider => {
@@ -24,12 +106,12 @@ const searchPatterns: SearchPattern[] = [{
   },
   description: 'Providers who attested in the last 14 days',
   response: "Here are the recent attestations from the past 14 days.",
-  relevantColumns: ['lastAttestationDate', 'attestationStatus', 'firstName', 'lastName', 'npi'],
+  relevantColumns: ['firstName', 'lastName', 'npi', 'lastAttestationDate', 'attestationStatus', 'specialty'],
   followUpQuestions: [
     'Show only active recent attestations',
-    'Which specialties recently attested?',
-    'Show recent attestations by state',
-    'Who attested in the last 7 days?'
+    'Who attested in the last 7 days?',
+    'Show recent attestations by specialty',
+    'Find recent urologist attestations'
   ]
 }, {
   patterns: ['show me providers in california', 'providers in california', 'california providers', 'find providers in california', 'california', 'ca providers'],
@@ -41,9 +123,9 @@ const searchPatterns: SearchPattern[] = [{
   relevantColumns: ['firstName', 'lastName', 'npi', 'primaryPracticeState', 'otherPracticeStates', 'specialty', 'attestationStatus'],
   followUpQuestions: [
     'Show only active providers in California',
-    'Which specialties are in California?',
-    'Show California providers by specialty',
-    'Find recent attestations in California'
+    'Show California cardiologists',
+    'Find California urologists',
+    'Show recent California attestations'
   ]
 }, {
   patterns: ['show only active providers in california', 'active providers in california', 'active california providers', 'active ca providers'],
@@ -57,9 +139,9 @@ const searchPatterns: SearchPattern[] = [{
   relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'primaryPracticeState', 'otherPracticeStates', 'specialty'],
   followUpQuestions: [
     'Show all providers in California',
-    'Find active providers in other states',
     'Show active California cardiologists',
-    'Which active California providers recently attested?'
+    'Find active providers in Texas',
+    'Show California providers needing updates'
   ]
 }, {
   patterns: ['find specialists by type', 'show specialists', 'specialists by type', 'find by specialty', 'show specialties', 'specialists'],
@@ -72,10 +154,10 @@ const searchPatterns: SearchPattern[] = [{
   response: "Here are all providers organized by their specialty types.",
   relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState'],
   followUpQuestions: [
-    'Show only cardiologists',
-    'Find active specialists',
+    'Show cardiologists only',
     'Show urologists only',
-    'Which specialties need attestation updates?'
+    'Find active specialists',
+    'Show specialists by state'
   ]
 }, {
   patterns: ['who needs to update their attestation', 'who needs attestation update', 'needs to update', 'attestation update needed', 'expired attestation', 'update attestation'],
@@ -84,12 +166,33 @@ const searchPatterns: SearchPattern[] = [{
   },
   description: 'Providers who need to update their attestation',
   response: "Here are providers who need to update their attestation (expired or pending).",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty'],
+  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty', 'primaryPracticeState'],
   followUpQuestions: [
     'Show only expired attestations',
     'Show only pending attestations',
-    'Which states have providers needing updates?',
-    'Show expired providers by specialty'
+    'Find expired cardiologists',
+    'Show providers needing updates by state'
+  ]
+}, {
+  patterns: ['who attested in the last 7 days', 'last 7 days', '7 days', 'attested this week', 'this week attestations'],
+  filter: provider => {
+    const attestationDate = new Date(provider.lastAttestationDate);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return attestationDate >= sevenDaysAgo;
+  },
+  sort: {
+    key: 'lastAttestationDate',
+    direction: 'desc'
+  },
+  description: 'Providers who attested in the last 7 days',
+  response: "Here are providers who attested within the last 7 days.",
+  relevantColumns: ['firstName', 'lastName', 'npi', 'lastAttestationDate', 'attestationStatus', 'specialty'],
+  followUpQuestions: [
+    'Show last 14 days instead',
+    'Show only active from last 7 days',
+    'Find last 7 days by specialty',
+    'Show yesterday\'s attestations'
   ]
 }, {
   patterns: ['show only active recent attestations', 'active recent attestations', 'active providers who recently attested'],
@@ -110,72 +213,53 @@ const searchPatterns: SearchPattern[] = [{
   relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty'],
   followUpQuestions: [
     'Show all recent attestations',
-    'Find active providers by specialty',
-    'Show recent attestations by state',
-    'Which active providers attested yesterday?'
+    'Find active recent cardiologists',
+    'Show active recent by state',
+    'Find active urologists recently attested'
   ]
 }, {
-  patterns: ['active (.*) in (.*)', 'show me active (.*) in (.*)', 'find active (.*) in (.*)', 'show active (.*) in (.*)', 'active (.*) in (.*)', 'active (.*) (.*)'],
-  filter: (provider, query: string) => {
+  patterns: ['show cardiologists', 'cardiologists only', 'cardiology providers', 'find cardiologists'],
+  filter: provider => provider.specialty.toLowerCase() === 'cardiology',
+  description: 'Cardiology providers',
+  response: "Here are all cardiology providers.",
+  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState'],
+  followUpQuestions: [
+    'Show active cardiologists only',
+    'Find California cardiologists',
+    'Show recent cardiology attestations',
+    'Find expired cardiologists'
+  ]
+}, {
+  patterns: ['show urologists', 'urologists only', 'urology providers', 'find urologists'],
+  filter: provider => provider.specialty.toLowerCase() === 'urologist',
+  description: 'Urology providers',
+  response: "Here are all urology providers.",
+  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState'],
+  followUpQuestions: [
+    'Show active urologists only',
+    'Find California urologists',
+    'Show recent urology attestations',
+    'Find pending urologists'
+  ]
+}, {
+  patterns: ['active urologist in ca', 'active urologists in california', 'active ca urologists'],
+  filter: provider => {
     const isActive = provider.attestationStatus === 'Active';
-    const specialtyMatch = query.match(/active (.*?) in/i)?.[1] || query.match(/active (.*?) (california|ca)/i)?.[1];
-    const locationMatch = query.match(/in (.*?)$/i)?.[1] || query.match(/active .*? (california|ca)/i)?.[1];
-    
-    const matchesSpecialty = specialty => provider.specialty.toLowerCase() === specialty.toLowerCase();
-    const matchesLocation = location => {
-      if (!location) return false;
-      const stateCode = location.length === 2 ? location.toUpperCase() : getStateCode(location);
-      return provider.primaryPracticeState === stateCode || provider.otherPracticeStates.includes(stateCode);
-    };
-    
-    return isActive && specialtyMatch && matchesSpecialty(specialtyMatch) && locationMatch && matchesLocation(locationMatch);
+    const isUrologist = provider.specialty.toLowerCase() === 'urologist';
+    const isInCA = provider.primaryPracticeState === 'CA' || provider.otherPracticeStates.includes('CA');
+    return isActive && isUrologist && isInCA;
   },
-  description: 'Active providers by specialty and location',
-  response: "I've filtered to show active providers matching your specialty and location criteria.",
+  description: 'Active urologists practicing in California',
+  response: "Here are active urologists practicing in California.",
   relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'specialty', 'primaryPracticeState', 'otherPracticeStates'],
   followUpQuestions: [
-    'Show all providers in this location',
-    'Show inactive providers with this specialty',
-    'Show recent attestations for this specialty',
-    'Find other specialties in this state'
-  ]
-}, {
-  patterns: ['active attestation', 'who have an active', 'only show active', 'show me active', 'currently active', 'active providers', 'active status'],
-  filter: provider => provider.attestationStatus === 'Active',
-  description: 'Providers with active attestation status',
-  response: "I've found all providers with active attestation status.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'specialty', 'primaryPracticeState'],
-  followUpQuestions: [
-    'Show me active providers in California',
-    'Which active providers recently attested?',
-    'Show active cardiologists',
-    'Find active providers by state'
-  ]
-}, {
-  patterns: ['expired', 'who have expired', 'show expired', 'expired status', 'expired providers', 'expired attestation'],
-  filter: provider => provider.attestationStatus === 'Expired',
-  description: 'Providers with expired status',
-  response: "I found providers with expired status.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty'],
-  followUpQuestions: [
-    'When did these providers last attest?',
-    'Show expired providers by state',
-    'Which specialties have expired attestations?',
-    'Show expired providers in California'
-  ]
-}, {
-  patterns: ['pending', 'who are pending', 'show pending', 'pending status', 'pending providers', 'pending attestation'],
-  filter: provider => provider.attestationStatus === 'Pending',
-  description: 'Providers with pending attestation',
-  response: "Here are the pending attestations.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty'],
-  followUpQuestions: [
-    'Show pending attestations by date',
-    'Which states have pending providers?',
-    'Show pending providers by specialty',
-    'Find oldest pending attestations'
+    'Show all California urologists',
+    'Find active cardiologists in California',
+    'Show recent California urology attestations',
+    'Find urologists in other states'
   ]
 }];
+
 // Helper function to convert state names to codes (simplified version)
 const stateMap = {
   california: 'CA',
@@ -187,13 +271,13 @@ const stateMap = {
   washington: 'WA',
   newyork: 'NY',
   newjersey: 'NJ'
-  // Add more common states
 };
-// Update getStateCode function
+
 const getStateCode = (stateName: string): string => {
   const normalizedName = stateName.toLowerCase().replace(/\s+/g, '');
   return stateMap[normalizedName] || stateName.toUpperCase();
 };
+
 export type SearchResult = {
   filteredData: any[];
   sort?: {
@@ -205,48 +289,50 @@ export type SearchResult = {
   relevantColumns?: string[];
   followUpQuestions?: string[];
 };
+
 export const processNaturalLanguageSearch = (query: string, data: any[]): SearchResult | null => {
   const normalizedQuery = query.toLowerCase().trim();
   if (normalizedQuery.length < 3) return null;
+
   // First try exact pattern matching for better accuracy
   for (const pattern of searchPatterns) {
     if (pattern.patterns.some(p => {
       const regex = new RegExp(p, 'i');
       return regex.test(normalizedQuery);
     })) {
+      const filteredData = data.filter(item => pattern.filter(item, normalizedQuery));
       return {
-        filteredData: data.filter(item => pattern.filter(item, normalizedQuery)),
+        filteredData,
         sort: pattern.sort,
         description: pattern.description,
         response: pattern.response,
         relevantColumns: pattern.relevantColumns,
-        followUpQuestions: pattern.followUpQuestions
+        followUpQuestions: pattern.followUpQuestions || generateContextualFollowUps(query, filteredData, pattern.relevantColumns || [])
       };
     }
   }
-  // Check for compound search criteria
-  const hasStatus = /(active|inactive|pending|expired)/i.test(normalizedQuery);
-  const hasSpecialty = data.map(item => item.specialty.toLowerCase()).some(specialty => normalizedQuery.includes(specialty.toLowerCase()));
-  const hasLocation = /(in|at|from) (.*?)($|\s)/i.test(normalizedQuery) || Object.keys(stateMap).some(state => normalizedQuery.includes(state.toLowerCase()));
+
   // For simple searches, show columns that match the search term
   if (normalizedQuery.length <= 20 && !normalizedQuery.includes('?')) {
     const relevantColumns = Object.keys(data[0] || {}).filter(key => data.some(item => {
       const value = item[key];
       return value && value.toString().toLowerCase().includes(normalizedQuery);
     }));
+    
+    const filteredData = data.filter(item => Object.values(item).some(value => 
+      value && (Array.isArray(value) ? 
+        value.some(v => v.toString().toLowerCase().includes(normalizedQuery)) : 
+        value.toString().toLowerCase().includes(normalizedQuery))));
+    
     return {
-      filteredData: data.filter(item => Object.values(item).some(value => value && (Array.isArray(value) ? value.some(v => v.toString().toLowerCase().includes(normalizedQuery)) : value.toString().toLowerCase().includes(normalizedQuery)))),
+      filteredData,
       description: `Results for "${query}"`,
       response: 'I found these results.',
       relevantColumns: relevantColumns.length > 0 ? relevantColumns : ['firstName', 'lastName', 'npi'],
-      followUpQuestions: [
-        'Show only active providers',
-        'Filter by specialty',
-        'Show by state',
-        'Find recent attestations'
-      ]
+      followUpQuestions: generateContextualFollowUps(query, filteredData, relevantColumns)
     };
   }
+
   if (normalizedQuery.includes('?') || normalizedQuery.startsWith('how') || normalizedQuery.startsWith('what') || normalizedQuery.startsWith('where') || normalizedQuery.startsWith('show')) {
     return {
       filteredData: data,
@@ -261,5 +347,6 @@ export const processNaturalLanguageSearch = (query: string, data: any[]): Search
       ]
     };
   }
+
   return null;
 };
