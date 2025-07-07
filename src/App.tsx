@@ -6,7 +6,7 @@ import { mockData } from './utils/data';
 import { processNaturalLanguageSearch } from './utils/searchProcessor';
 import { SqlModal } from './components/SqlModal';
 import { generateSql } from './utils/sqlGenerator';
-import { Bot, Lightbulb, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Bot, Lightbulb, X, Sparkles, ArrowRight, HelpCircle } from 'lucide-react';
 
 export function App() {
   const [data] = useState(mockData);
@@ -15,6 +15,7 @@ export function App() {
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
   const [showDemo, setShowDemo] = useState(true);
   const [isFirstVisit, setIsFirstVisit] = useState(true);
+  const [demoHidden, setDemoHidden] = useState(false);
 
   // Demo suggestions for users - Wayfinders pattern
   const demoQuestions = [
@@ -166,11 +167,22 @@ export function App() {
     setSearchResult(null);
     setShowDemo(true);
     setIsFirstVisit(true);
+    setDemoHidden(false);
     
     // Update browser URL
     const url = new URL(window.location);
     url.searchParams.delete('q');
     window.history.pushState({}, '', url);
+  };
+
+  const handleHideDemo = () => {
+    setDemoHidden(true);
+    setShowDemo(false);
+  };
+
+  const handleShowDemo = () => {
+    setDemoHidden(false);
+    setShowDemo(true);
   };
 
   const displayData = searchResult?.filteredData || data;
@@ -229,7 +241,7 @@ export function App() {
           </div>
 
           {/* Demo/Help Section - Wayfinders & Nudges patterns */}
-          {(showDemo || isFirstVisit) && (
+          {(showDemo || isFirstVisit) && !demoHidden && (
             <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-2">
@@ -238,7 +250,7 @@ export function App() {
                   <Sparkles className="w-4 h-4 text-blue-500" />
                 </div>
                 <button 
-                  onClick={() => setShowDemo(false)}
+                  onClick={handleHideDemo}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <X className="w-4 h-4" />
@@ -262,6 +274,19 @@ export function App() {
             </div>
           )}
 
+          {/* Show Demo Button when hidden */}
+          {demoHidden && (
+            <div className="mb-6">
+              <button
+                onClick={handleShowDemo}
+                className="flex items-center px-4 py-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Show AI Search Examples
+              </button>
+            </div>
+          )}
+
           <div className="mb-4 flex flex-wrap justify-between items-center">
             <div className="flex space-x-4 mb-2 md:mb-0">
               <ColumnSelector columns={visibleColumns} toggleColumnVisibility={toggleColumnVisibility} />
@@ -279,15 +304,15 @@ export function App() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Ask any question about providers - I'm here to help with your provider search..." 
+                  placeholder="Ask any questions" 
                   className="w-full pl-12 pr-4 py-3 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-gradient-to-r from-white to-blue-50" 
                   value={searchQuery} 
                   onChange={e => handleSearch(e.target.value)} 
                 />
               </div>
-              {!searchQuery && !showDemo && (
+              {!searchQuery && demoHidden && (
                 <button
-                  onClick={() => setShowDemo(true)}
+                  onClick={handleShowDemo}
                   className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
                 >
                   Show examples
