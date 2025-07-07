@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { Filter } from 'lucide-react';
 
 export const ColumnSelector = ({
   columns,
@@ -22,7 +22,7 @@ export const ColumnSelector = ({
         className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-600 rounded-md hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm hover:shadow-md" 
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Settings className="w-4 h-4 mr-2" />
+        <Filter className="w-4 h-4 mr-2" />
         <span className="font-semibold">Identifiers</span>
         <span className="ml-2 text-blue-200">({columns.filter(col => col.isVisible).length})</span>
       </button>

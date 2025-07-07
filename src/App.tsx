@@ -6,7 +6,7 @@ import { mockData } from './utils/data';
 import { processNaturalLanguageSearch } from './utils/searchProcessor';
 import { SqlModal } from './components/SqlModal';
 import { generateSql } from './utils/sqlGenerator';
-import { MessageCircle, Lightbulb, X } from 'lucide-react';
+import { Bot, Lightbulb, X, Sparkles, ArrowRight } from 'lucide-react';
 import { CAQHLogo } from './components/CAQHLogo';
 
 export function App() {
@@ -14,9 +14,10 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
+  const [showDemo, setShowDemo] = useState(true); // Show demo by default for new users
+  const [isFirstVisit, setIsFirstVisit] = useState(true);
 
-  // Demo suggestions for users
+  // Demo suggestions for users - Wayfinders pattern
   const demoQuestions = [
     "Which providers have recently attested?",
     "Show me providers in California",
@@ -74,7 +75,9 @@ export function App() {
     isVisible: false,
     isAlwaysVisible: false
   }];
+
   const [visibleColumns, setVisibleColumns] = useState(allColumns);
+
   // Update column visibility based on search results and filters
   useEffect(() => {
     if (searchResult) {
@@ -84,21 +87,34 @@ export function App() {
       })));
     }
   }, [searchResult]);
+
   const toggleColumnVisibility = columnId => {
     setVisibleColumns(visibleColumns.map(column => column.id === columnId ? {
       ...column,
       isVisible: !column.isVisible
     } : column));
   };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     const result = processNaturalLanguageSearch(query, data);
     setSearchResult(result);
+    setIsFirstVisit(false);
+    // Hide demo after first search to reduce clutter
+    if (query.length > 0) {
+      setShowDemo(false);
+    }
   };
+
   const handleDemoClick = (question: string) => {
     handleSearch(question);
     setShowDemo(false);
   };
+
+  const handleFollowUpClick = (question: string) => {
+    handleSearch(question);
+  };
+
   const displayData = searchResult?.filteredData || data;
   const currentSql = generateSql(searchQuery, displayData === data ? {} : {
     attestationStatus: searchQuery
@@ -106,6 +122,7 @@ export function App() {
     key: null,
     direction: 'asc'
   });
+
   return <div className="min-h-screen bg-gray-100">
       <header className="bg-blue-900 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
@@ -117,6 +134,7 @@ export function App() {
             <button 
               onClick={() => setShowDemo(!showDemo)}
               className="bg-blue-800 p-2 rounded-full hover:bg-blue-700 transition-colors"
+              title="Show help and examples"
             >
               <span className="sr-only">Help</span>?
             </button>
@@ -134,13 +152,14 @@ export function App() {
             </p>
           </div>
 
-          {/* Demo/Help Section */}
-          {showDemo && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          {/* Demo/Help Section - Wayfinders & Nudges patterns */}
+          {(showDemo || isFirstVisit) && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-2">
-                  <Lightbulb className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-blue-800">How to Use Provider Search</h3>
+                  <Bot className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-800">AI-Powered Provider Search</h3>
+                  <Sparkles className="w-4 h-4 text-blue-500" />
                 </div>
                 <button 
                   onClick={() => setShowDemo(false)}
@@ -150,16 +169,17 @@ export function App() {
                 </button>
               </div>
               <p className="text-blue-700 mb-3">
-                Ask any question about providers and get instant results. Try these examples:
+                Ask any question about providers in natural language and get instant results. Try these examples:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {demoQuestions.map((question, index) => (
                   <button
                     key={index}
                     onClick={() => handleDemoClick(question)}
-                    className="text-left p-2 bg-white border border-blue-300 rounded text-blue-700 hover:bg-blue-100 transition-colors"
+                    className="text-left p-3 bg-white border border-blue-300 rounded-lg text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-between group"
                   >
-                    "{question}"
+                    <span>"{question}"</span>
+                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 ))}
               </div>
@@ -173,13 +193,18 @@ export function App() {
                 View SQL
               </button>
             </div>
+            
+            {/* AI Search Input - Identifiers pattern */}
             <div className="relative flex-1 max-w-xl ml-4">
               <div className="relative">
-                <MessageCircle className="absolute left-3 top-2.5 w-5 h-5 text-blue-500" />
+                <div className="absolute left-3 top-2.5 flex items-center space-x-1">
+                  <Bot className="w-5 h-5 text-blue-500" />
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                </div>
                 <input 
                   type="text" 
                   placeholder="Ask any question about providers - I'm here to help with your provider search..." 
-                  className="w-full pl-10 pr-4 py-2 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+                  className="w-full pl-12 pr-4 py-3 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-gradient-to-r from-white to-blue-50" 
                   value={searchQuery} 
                   onChange={e => handleSearch(e.target.value)} 
                 />
@@ -187,33 +212,54 @@ export function App() {
               {!searchQuery && !showDemo && (
                 <button
                   onClick={() => setShowDemo(true)}
-                  className="absolute right-2 top-2 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
+                  className="absolute right-2 top-2.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded"
                 >
                   Show examples
                 </button>
               )}
             </div>
           </div>
-          {searchResult?.description && <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-1">
-                {searchResult.description}
-              </p>
-              {searchResult.response && <div className="text-sm text-blue-600">
-                  {searchResult.response.split('\n').map((line, index) => {
-              if (line.includes("'")) {
-                const suggestion = line.match(/'([^']+)'/)?.[1];
-                return suggestion ? <button key={index} onClick={() => handleSearch(suggestion)} className="block text-left hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 -ml-1">
-                          {line}
-                        </button> : <p key={index} className="italic">
-                          {line}
-                        </p>;
-              }
-              return <p key={index} className="italic">
-                        {line}
-                      </p>;
-            })}
-                </div>}
-            </div>}
+
+          {/* AI Response Section */}
+          {searchResult?.description && (
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-lg">
+              <div className="flex items-start space-x-2 mb-2">
+                <Bot className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800 font-medium mb-1">
+                    {searchResult.description}
+                  </p>
+                  {searchResult.response && (
+                    <p className="text-sm text-blue-700 mb-3">
+                      {searchResult.response}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Follow-up Questions - Follow up pattern */}
+              {searchResult.followUpQuestions && searchResult.followUpQuestions.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
+                    Try asking:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {searchResult.followUpQuestions.map((question, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleFollowUpClick(question)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-full hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md group"
+                      >
+                        "{question}"
+                        <ArrowRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <ProviderTable data={displayData} columns={visibleColumns.filter(col => col.isVisible)} initialSort={searchResult?.sort} />
         </div>
       </main>

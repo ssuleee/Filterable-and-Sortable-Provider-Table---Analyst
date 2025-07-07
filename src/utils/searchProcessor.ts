@@ -8,48 +8,10 @@ type SearchPattern = {
   description: string;
   response?: string;
   relevantColumns?: string[];
+  followUpQuestions?: string[];
 };
 const searchPatterns: SearchPattern[] = [{
-  patterns: ['active (.*) in (.*)', 'show me active (.*) in (.*)', 'find active (.*) in (.*)', 'show active (.*) in (.*)', 'active (.*) in (.*)',
-  // Added exact pattern match
-  'active (.*) (.*)'],
-  filter: (provider, query: string) => {
-    const isActive = provider.attestationStatus === 'Active';
-    // Extract specialty and location from query
-    const specialtyMatch = query.match(/active (.*?) in/i)?.[1] || query.match(/active (.*?) (california|ca)/i)?.[1];
-    const locationMatch = query.match(/in (.*?)$/i)?.[1] || query.match(/active .*? (california|ca)/i)?.[1];
-    // Match specialty exactly (case-insensitive)
-    const matchesSpecialty = specialty => provider.specialty.toLowerCase() === specialty.toLowerCase();
-    // Match location including state code variations
-    const matchesLocation = location => {
-      if (!location) return false;
-      const stateCode = location.length === 2 ? location.toUpperCase() : getStateCode(location);
-      return provider.primaryPracticeState === stateCode || provider.otherPracticeStates.includes(stateCode);
-    };
-    // All conditions must be true for a match
-    return isActive && specialtyMatch && matchesSpecialty(specialtyMatch) && locationMatch && matchesLocation(locationMatch);
-  },
-  description: 'Active providers by specialty and location',
-  response: "I've filtered to show active providers matching your specialty and location criteria. You might also want to try:\n- 'Show all providers in this location'\n- 'Show inactive providers with this specialty'\n- 'Show recent attestations for this specialty'",
-  relevantColumns: ['attestationStatus', 'specialty', 'primaryPracticeState', 'otherPracticeStates']
-}, {
-  patterns: ['active (.*) california', 'active (.*) in california', 'active california', 'california active'],
-  filter: provider => {
-    const isActive = provider.attestationStatus === 'Active';
-    const isInCalifornia = provider.primaryPracticeState === 'CA' || provider.otherPracticeStates.includes('CA');
-    return isActive && isInCalifornia;
-  },
-  description: 'Active providers in California',
-  response: "I've found active providers in California. You might also want to ask:\n- 'Show me active providers in other states'\n- 'Which specialties are active in California?'\n- 'Show recent attestations in California'",
-  relevantColumns: ['attestationStatus', 'primaryPracticeState', 'otherPracticeStates']
-}, {
-  patterns: ['active attestation', 'who have an active', 'only show active', 'show me active', 'currently active', 'active providers', 'active status'],
-  filter: provider => provider.attestationStatus === 'Active',
-  description: 'Providers with active attestation status',
-  response: "I've found all providers with active attestation status. You might also want to ask:\n- 'Show me active providers in California'\n- 'Which active providers recently attested?'\n- 'Show active cardiologists'",
-  relevantColumns: ['attestationStatus']
-}, {
-  patterns: ['recent attestation', 'recently attested', 'attested recently', 'new attestations', 'latest attestations', 'who recently attested'],
+  patterns: ['which providers have recently attested', 'who recently attested', 'recent attestation', 'recently attested', 'attested recently', 'new attestations', 'latest attestations', 'providers who attested recently'],
   filter: provider => {
     const attestationDate = new Date(provider.lastAttestationDate);
     const twoWeeksAgo = new Date();
@@ -61,36 +23,119 @@ const searchPatterns: SearchPattern[] = [{
     direction: 'desc'
   },
   description: 'Providers who attested in the last 14 days',
-  response: "Here are the recent attestations. Try asking:\n- 'Show only active recent attestations'\n- 'Which specialties recently attested?'\n- 'Show recent attestations by state'",
-  relevantColumns: ['lastAttestationDate', 'attestationStatus']
+  response: "Here are the recent attestations from the past 14 days.",
+  relevantColumns: ['lastAttestationDate', 'attestationStatus'],
+  followUpQuestions: [
+    'Show only active recent attestations',
+    'Which specialties recently attested?',
+    'Show recent attestations by state',
+    'Who attested in the last 7 days?'
+  ]
 }, {
-  patterns: ['expired', 'who have expired', 'show expired', 'expired status', 'expired providers', 'expired attestation'],
-  filter: provider => provider.attestationStatus === 'Expired',
-  description: 'Providers with expired status',
-  response: "I found providers with expired status. You might want to know:\n- 'When did these providers last attest?'\n- 'Show expired providers by state'\n- 'Which specialties have expired attestations?'",
-  relevantColumns: ['attestationStatus']
+  patterns: ['show me providers in california', 'providers in california', 'california providers', 'find providers in california', 'california', 'ca providers'],
+  filter: provider => {
+    return provider.primaryPracticeState === 'CA' || provider.otherPracticeStates.includes('CA');
+  },
+  description: 'Providers practicing in California',
+  response: "Here are all providers practicing in California.",
+  relevantColumns: ['primaryPracticeState', 'otherPracticeStates', 'specialty'],
+  followUpQuestions: [
+    'Show only active providers in California',
+    'Which specialties are in California?',
+    'Show California providers by specialty',
+    'Find recent attestations in California'
+  ]
 }, {
-  patterns: ['pending', 'who are pending', 'show pending', 'pending status', 'pending providers', 'pending attestation'],
-  filter: provider => provider.attestationStatus === 'Pending',
-  description: 'Providers with pending attestation',
-  response: "Here are the pending attestations. Try asking:\n- 'Show pending attestations by date'\n- 'Which states have pending providers?'\n- 'Show pending providers by specialty'",
-  relevantColumns: ['attestationStatus']
-}, {
-  patterns: ['specialty', 'specialties', 'specialized'],
+  patterns: ['find specialists by type', 'show specialists', 'specialists by type', 'find by specialty', 'show specialties', 'specialists'],
   filter: () => true,
   sort: {
     key: 'specialty',
     direction: 'asc'
   },
-  description: 'Providers by specialty',
-  response: "I can help you find providers by specialty. Try asking about specific specialties like 'Show me cardiologists'.",
-  relevantColumns: ['specialty']
+  description: 'All providers organized by specialty',
+  response: "Here are all providers organized by their specialty types.",
+  relevantColumns: ['specialty', 'attestationStatus'],
+  followUpQuestions: [
+    'Show only cardiologists',
+    'Find active specialists',
+    'Show urologists only',
+    'Which specialties need attestation updates?'
+  ]
 }, {
-  patterns: ['state', 'location', 'practice in'],
-  filter: () => true,
-  description: 'Providers by location',
-  response: 'I can help you find providers by state. You can ask about specific states or see all practice locations.',
-  relevantColumns: ['primaryPracticeState', 'otherPracticeStates']
+  patterns: ['who needs to update their attestation', 'who needs attestation update', 'needs to update', 'attestation update needed', 'expired attestation', 'update attestation'],
+  filter: provider => {
+    return provider.attestationStatus === 'Expired' || provider.attestationStatus === 'Pending';
+  },
+  description: 'Providers who need to update their attestation',
+  response: "Here are providers who need to update their attestation (expired or pending).",
+  relevantColumns: ['attestationStatus', 'lastAttestationDate'],
+  followUpQuestions: [
+    'Show only expired attestations',
+    'Show only pending attestations',
+    'Which states have providers needing updates?',
+    'Show expired providers by specialty'
+  ]
+}, {
+  patterns: ['active (.*) in (.*)', 'show me active (.*) in (.*)', 'find active (.*) in (.*)', 'show active (.*) in (.*)', 'active (.*) in (.*)', 'active (.*) (.*)'],
+  filter: (provider, query: string) => {
+    const isActive = provider.attestationStatus === 'Active';
+    const specialtyMatch = query.match(/active (.*?) in/i)?.[1] || query.match(/active (.*?) (california|ca)/i)?.[1];
+    const locationMatch = query.match(/in (.*?)$/i)?.[1] || query.match(/active .*? (california|ca)/i)?.[1];
+    
+    const matchesSpecialty = specialty => provider.specialty.toLowerCase() === specialty.toLowerCase();
+    const matchesLocation = location => {
+      if (!location) return false;
+      const stateCode = location.length === 2 ? location.toUpperCase() : getStateCode(location);
+      return provider.primaryPracticeState === stateCode || provider.otherPracticeStates.includes(stateCode);
+    };
+    
+    return isActive && specialtyMatch && matchesSpecialty(specialtyMatch) && locationMatch && matchesLocation(locationMatch);
+  },
+  description: 'Active providers by specialty and location',
+  response: "I've filtered to show active providers matching your specialty and location criteria.",
+  relevantColumns: ['attestationStatus', 'specialty', 'primaryPracticeState', 'otherPracticeStates'],
+  followUpQuestions: [
+    'Show all providers in this location',
+    'Show inactive providers with this specialty',
+    'Show recent attestations for this specialty',
+    'Find other specialties in this state'
+  ]
+}, {
+  patterns: ['active attestation', 'who have an active', 'only show active', 'show me active', 'currently active', 'active providers', 'active status'],
+  filter: provider => provider.attestationStatus === 'Active',
+  description: 'Providers with active attestation status',
+  response: "I've found all providers with active attestation status.",
+  relevantColumns: ['attestationStatus'],
+  followUpQuestions: [
+    'Show me active providers in California',
+    'Which active providers recently attested?',
+    'Show active cardiologists',
+    'Find active providers by state'
+  ]
+}, {
+  patterns: ['expired', 'who have expired', 'show expired', 'expired status', 'expired providers', 'expired attestation'],
+  filter: provider => provider.attestationStatus === 'Expired',
+  description: 'Providers with expired status',
+  response: "I found providers with expired status.",
+  relevantColumns: ['attestationStatus'],
+  followUpQuestions: [
+    'When did these providers last attest?',
+    'Show expired providers by state',
+    'Which specialties have expired attestations?',
+    'Show expired providers in California'
+  ]
+}, {
+  patterns: ['pending', 'who are pending', 'show pending', 'pending status', 'pending providers', 'pending attestation'],
+  filter: provider => provider.attestationStatus === 'Pending',
+  description: 'Providers with pending attestation',
+  response: "Here are the pending attestations.",
+  relevantColumns: ['attestationStatus'],
+  followUpQuestions: [
+    'Show pending attestations by date',
+    'Which states have pending providers?',
+    'Show pending providers by specialty',
+    'Find oldest pending attestations'
+  ]
 }];
 // Helper function to convert state names to codes (simplified version)
 const stateMap = {
@@ -119,44 +164,12 @@ export type SearchResult = {
   description: string;
   response?: string;
   relevantColumns?: string[];
+  followUpQuestions?: string[];
 };
 export const processNaturalLanguageSearch = (query: string, data: any[]): SearchResult | null => {
   const normalizedQuery = query.toLowerCase().trim();
   if (normalizedQuery.length < 3) return null;
-  // Check for compound search criteria
-  const hasStatus = /(active|inactive|pending|expired)/i.test(normalizedQuery);
-  const hasSpecialty = data.map(item => item.specialty.toLowerCase()).some(specialty => normalizedQuery.includes(specialty.toLowerCase()));
-  const hasLocation = /(in|at|from) (.*?)($|\s)/i.test(normalizedQuery) || Object.keys(stateMap).some(state => normalizedQuery.includes(state.toLowerCase()));
-  // If we have multiple criteria, prioritize the complex pattern matching
-  if (hasStatus && hasSpecialty || hasStatus && hasLocation || hasSpecialty && hasLocation) {
-    for (const pattern of searchPatterns) {
-      if (pattern.patterns.some(p => {
-        const regex = new RegExp(p, 'i');
-        return regex.test(normalizedQuery);
-      })) {
-        return {
-          filteredData: data.filter(item => pattern.filter(item, normalizedQuery)),
-          sort: pattern.sort,
-          description: pattern.description,
-          response: pattern.response,
-          relevantColumns: pattern.relevantColumns
-        };
-      }
-    }
-  }
-  // For simple searches, show columns that match the search term
-  if (normalizedQuery.length <= 20 && !normalizedQuery.includes('?')) {
-    const relevantColumns = Object.keys(data[0] || {}).filter(key => data.some(item => {
-      const value = item[key];
-      return value && value.toString().toLowerCase().includes(normalizedQuery);
-    }));
-    return {
-      filteredData: data.filter(item => Object.values(item).some(value => value && (Array.isArray(value) ? value.some(v => v.toString().toLowerCase().includes(normalizedQuery)) : value.toString().toLowerCase().includes(normalizedQuery)))),
-      description: `Results for "${query}"`,
-      response: 'I found these results. Would you like to filter them further?',
-      relevantColumns
-    };
-  }
+  // First try exact pattern matching for better accuracy
   for (const pattern of searchPatterns) {
     if (pattern.patterns.some(p => {
       const regex = new RegExp(p, 'i');
@@ -167,15 +180,45 @@ export const processNaturalLanguageSearch = (query: string, data: any[]): Search
         sort: pattern.sort,
         description: pattern.description,
         response: pattern.response,
-        relevantColumns: pattern.relevantColumns
+        relevantColumns: pattern.relevantColumns,
+        followUpQuestions: pattern.followUpQuestions
       };
     }
+  }
+  // Check for compound search criteria
+  const hasStatus = /(active|inactive|pending|expired)/i.test(normalizedQuery);
+  const hasSpecialty = data.map(item => item.specialty.toLowerCase()).some(specialty => normalizedQuery.includes(specialty.toLowerCase()));
+  const hasLocation = /(in|at|from) (.*?)($|\s)/i.test(normalizedQuery) || Object.keys(stateMap).some(state => normalizedQuery.includes(state.toLowerCase()));
+  // For simple searches, show columns that match the search term
+  if (normalizedQuery.length <= 20 && !normalizedQuery.includes('?')) {
+    const relevantColumns = Object.keys(data[0] || {}).filter(key => data.some(item => {
+      const value = item[key];
+      return value && value.toString().toLowerCase().includes(normalizedQuery);
+    }));
+    return {
+      filteredData: data.filter(item => Object.values(item).some(value => value && (Array.isArray(value) ? value.some(v => v.toString().toLowerCase().includes(normalizedQuery)) : value.toString().toLowerCase().includes(normalizedQuery)))),
+      description: `Results for "${query}"`,
+      response: 'I found these results.',
+      relevantColumns,
+      followUpQuestions: [
+        'Show only active providers',
+        'Filter by specialty',
+        'Show by state',
+        'Find recent attestations'
+      ]
+    };
   }
   if (normalizedQuery.includes('?') || normalizedQuery.startsWith('how') || normalizedQuery.startsWith('what') || normalizedQuery.startsWith('where') || normalizedQuery.startsWith('show')) {
     return {
       filteredData: data,
-      description: "I'm not sure I understood that exactly. Try asking about providers, attestations, specialties, or locations.",
-      response: "You can try phrases like 'Show active providers' or 'Find recent attestations'."
+      description: "I'm not sure I understood that exactly. Let me show you all providers.",
+      response: "I can help you find specific providers, attestations, specialties, or locations.",
+      followUpQuestions: [
+        'Show active providers',
+        'Find recent attestations',
+        'Show providers in California',
+        'Find specialists by type'
+      ]
     };
   }
   return null;
