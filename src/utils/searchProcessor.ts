@@ -95,17 +95,29 @@ const generateContextualFollowUps = (query: string, data: any[], currentColumns:
 const searchPatterns: SearchPattern[] = [{
   patterns: ['which providers have recently attested', 'who recently attested', 'recent attestation', 'recently attested', 'attested recently', 'new attestations', 'latest attestations', 'providers who attested recently'],
   filter: provider => {
-    const attestationDate = new Date(provider.lastAttestationDate);
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    return attestationDate >= twoWeeksAgo;
+    try {
+      const attestationDate = new Date(provider.lastAttestationDate);
+      const today = new Date();
+      const fourteenDaysAgo = new Date(today.getTime() - (14 * 24 * 60 * 60 * 1000));
+      
+      // Debug: log the dates to see what's happening
+      console.log('Provider:', provider.firstName, provider.lastName);
+      console.log('Attestation Date:', attestationDate);
+      console.log('Fourteen days ago:', fourteenDaysAgo);
+      console.log('Is recent?', attestationDate >= fourteenDaysAgo);
+      
+      return attestationDate >= fourteenDaysAgo;
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      return false;
+    }
   },
   sort: {
     key: 'lastAttestationDate',
     direction: 'desc'
   },
   description: 'Providers who attested in the last 14 days',
-  response: "Here are the recent attestations from the past 14 days.",
+  response: "Here are the recent attestations from the past 14 days, sorted from most recent to oldest.",
   relevantColumns: ['firstName', 'lastName', 'npi', 'lastAttestationDate', 'attestationStatus', 'specialty'],
   followUpQuestions: [
     'Show only active recent attestations',
@@ -176,17 +188,29 @@ const searchPatterns: SearchPattern[] = [{
 }, {
   patterns: ['who attested in the last 7 days', 'last 7 days', '7 days', 'attested this week', 'this week attestations'],
   filter: provider => {
-    const attestationDate = new Date(provider.lastAttestationDate);
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return attestationDate >= sevenDaysAgo;
+    try {
+      const attestationDate = new Date(provider.lastAttestationDate);
+      const today = new Date();
+      const sevenDaysAgo = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+      
+      // Debug: log the dates to see what's happening
+      console.log('Provider:', provider.firstName, provider.lastName);
+      console.log('Attestation Date:', attestationDate);
+      console.log('Seven days ago:', sevenDaysAgo);
+      console.log('Is within 7 days?', attestationDate >= sevenDaysAgo);
+      
+      return attestationDate >= sevenDaysAgo;
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      return false;
+    }
   },
   sort: {
     key: 'lastAttestationDate',
     direction: 'desc'
   },
   description: 'Providers who attested in the last 7 days',
-  response: "Here are providers who attested within the last 7 days.",
+  response: "Here are providers who attested within the last 7 days, sorted from most recent to oldest.",
   relevantColumns: ['firstName', 'lastName', 'npi', 'lastAttestationDate', 'attestationStatus', 'specialty'],
   followUpQuestions: [
     'Show last 14 days instead',
@@ -197,19 +221,24 @@ const searchPatterns: SearchPattern[] = [{
 }, {
   patterns: ['show only active recent attestations', 'active recent attestations', 'active providers who recently attested'],
   filter: provider => {
-    const attestationDate = new Date(provider.lastAttestationDate);
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    const isRecent = attestationDate >= twoWeeksAgo;
-    const isActive = provider.attestationStatus === 'Active';
-    return isRecent && isActive;
+    try {
+      const attestationDate = new Date(provider.lastAttestationDate);
+      const today = new Date();
+      const fourteenDaysAgo = new Date(today.getTime() - (14 * 24 * 60 * 60 * 1000));
+      const isRecent = attestationDate >= fourteenDaysAgo;
+      const isActive = provider.attestationStatus === 'Active';
+      return isRecent && isActive;
+    } catch (error) {
+      console.error('Date parsing error:', error);
+      return false;
+    }
   },
   sort: {
     key: 'lastAttestationDate',
     direction: 'desc'
   },
   description: 'Active providers who attested in the last 14 days',
-  response: "Here are active providers who have recently attested.",
+  response: "Here are active providers who have recently attested, sorted from most recent to oldest.",
   relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'lastAttestationDate', 'specialty'],
   followUpQuestions: [
     'Show all recent attestations',
@@ -222,7 +251,7 @@ const searchPatterns: SearchPattern[] = [{
   filter: provider => provider.specialty.toLowerCase() === 'cardiology',
   description: 'Cardiology providers',
   response: "Here are all cardiology providers.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState'],
+  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState', 'lastAttestationDate'],
   followUpQuestions: [
     'Show active cardiologists only',
     'Find California cardiologists',
@@ -234,7 +263,7 @@ const searchPatterns: SearchPattern[] = [{
   filter: provider => provider.specialty.toLowerCase() === 'urologist',
   description: 'Urology providers',
   response: "Here are all urology providers.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState'],
+  relevantColumns: ['firstName', 'lastName', 'npi', 'specialty', 'attestationStatus', 'primaryPracticeState', 'lastAttestationDate'],
   followUpQuestions: [
     'Show active urologists only',
     'Find California urologists',
@@ -251,7 +280,7 @@ const searchPatterns: SearchPattern[] = [{
   },
   description: 'Active urologists practicing in California',
   response: "Here are active urologists practicing in California.",
-  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'specialty', 'primaryPracticeState', 'otherPracticeStates'],
+  relevantColumns: ['firstName', 'lastName', 'npi', 'attestationStatus', 'specialty', 'primaryPracticeState', 'otherPracticeStates', 'lastAttestationDate'],
   followUpQuestions: [
     'Show all California urologists',
     'Find active cardiologists in California',

@@ -4,7 +4,7 @@ export const mockData = [{
   lastName: 'Smith',
   npi: '1234567890',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-07-05',
+  lastAttestationDate: '2025-07-07',
   specialty: 'Cardiology',
   primaryPracticeState: 'CA',
   otherPracticeStates: ['NY', 'NJ']
@@ -13,7 +13,7 @@ export const mockData = [{
   lastName: 'Jackson',
   npi: '1254567890',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-07-04',
+  lastAttestationDate: '2025-07-06',
   specialty: 'Urologist',
   primaryPracticeState: 'CA',
   otherPracticeStates: ['NY', 'NJ']
@@ -22,7 +22,7 @@ export const mockData = [{
   lastName: 'Smith',
   npi: '1234567890',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-07-03',
+  lastAttestationDate: '2025-07-05',
   specialty: 'Cardiology',
   primaryPracticeState: 'CA',
   otherPracticeStates: ['NY', 'NJ']
@@ -40,7 +40,7 @@ export const mockData = [{
   lastName: 'Williams',
   npi: '3456789012',
   attestationStatus: 'Pending',
-  lastAttestationDate: '2025-07-02',
+  lastAttestationDate: '2025-07-04',
   specialty: 'Neurology',
   primaryPracticeState: 'WA',
   otherPracticeStates: ['OR', 'ID', 'CA']
@@ -49,7 +49,7 @@ export const mockData = [{
   lastName: 'Brown',
   npi: '4567890123',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-07-01',
+  lastAttestationDate: '2025-07-03',
   specialty: 'Dermatology',
   primaryPracticeState: 'IL',
   otherPracticeStates: ['MI']
@@ -67,7 +67,7 @@ export const mockData = [{
   lastName: 'Garcia',
   npi: '6789012345',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-06-30',
+  lastAttestationDate: '2025-07-02',
   specialty: 'Psychiatry',
   primaryPracticeState: 'AZ',
   otherPracticeStates: ['NV', 'CA']
@@ -85,7 +85,7 @@ export const mockData = [{
   lastName: 'Davis',
   npi: '8901234567',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-06-29',
+  lastAttestationDate: '2025-07-01',
   specialty: 'Urologist',
   primaryPracticeState: 'CA',
   otherPracticeStates: ['CT', 'RI']
@@ -94,7 +94,7 @@ export const mockData = [{
   lastName: 'Rodriguez',
   npi: '9012345678',
   attestationStatus: 'Pending',
-  lastAttestationDate: '2025-06-28',
+  lastAttestationDate: '2025-06-30',
   specialty: 'Urologist',
   primaryPracticeState: 'NJ',
   otherPracticeStates: ['DE', 'CA']
@@ -103,7 +103,7 @@ export const mockData = [{
   lastName: 'Wilson',
   npi: '0123456789',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-06-27',
+  lastAttestationDate: '2025-06-29',
   specialty: 'Rheumatology',
   primaryPracticeState: 'CO',
   otherPracticeStates: ['UT', 'WY']
@@ -121,7 +121,7 @@ export const mockData = [{
   lastName: 'Anderson',
   npi: '2233445566',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-06-26',
+  lastAttestationDate: '2025-06-28',
   specialty: 'Pulmonology',
   primaryPracticeState: 'WI',
   otherPracticeStates: ['MN']
@@ -139,7 +139,7 @@ export const mockData = [{
   lastName: 'Thomas',
   npi: '4455667788',
   attestationStatus: 'Active',
-  lastAttestationDate: '2025-06-25',
+  lastAttestationDate: '2025-06-27',
   specialty: 'Oncology',
   primaryPracticeState: 'SC',
   otherPracticeStates: ['AL', 'GA']
@@ -148,7 +148,7 @@ export const mockData = [{
   lastName: 'Hernandez',
   npi: '5566778899',
   attestationStatus: 'Pending',
-  lastAttestationDate: '2025-06-24',
+  lastAttestationDate: '2025-06-26',
   specialty: 'Nephrology',
   primaryPracticeState: 'LA',
   otherPracticeStates: ['MS', 'AL']
