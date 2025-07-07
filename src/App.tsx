@@ -197,29 +197,6 @@ export function App() {
       <header className="bg-blue-900 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            {/* CAQH Logo - using image file */}
-            <div className="w-10 h-10 flex items-center justify-center">
-              <img 
-                src="/Caqh_logo (1).png" 
-                alt="CAQH Logo" 
-                className="h-8 w-auto object-contain"
-                onError={(e) => {
-                  // Fallback to SVG if image not found
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'block';
-                }}
-              />
-              {/* Fallback SVG Logo */}
-              <div className="w-10 h-10 bg-white rounded-lg p-2 flex items-center justify-center shadow-sm" style={{display: 'none'}}>
-                <svg viewBox="0 0 100 40" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="100" height="40" rx="4" fill="#1e40af"/>
-                  <text x="50" y="25" textAnchor="middle" fontSize="14" fontWeight="bold" fill="white" fontFamily="Arial, sans-serif">CAQH</text>
-                  <circle cx="15" cy="12" r="3" fill="#60a5fa" opacity="0.8"/>
-                  <circle cx="85" cy="28" r="2" fill="#60a5fa" opacity="0.6"/>
-                  <rect x="75" y="8" width="3" height="8" rx="1.5" fill="#60a5fa" opacity="0.7"/>
-                </svg>
-              </div>
-            </div>
             <button 
               onClick={handleReset}
               className="text-2xl font-bold hover:text-blue-200 transition-colors cursor-pointer"
