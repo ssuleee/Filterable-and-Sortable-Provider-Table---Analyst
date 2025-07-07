@@ -6,8 +6,7 @@ import { mockData } from './utils/data';
 import { processNaturalLanguageSearch } from './utils/searchProcessor';
 import { SqlModal } from './components/SqlModal';
 import { generateSql } from './utils/sqlGenerator';
-import { Bot, Lightbulb, X, Sparkles, ArrowRight } from 'lucide-react';
-import { CAQHLogo } from './components/CAQHLogo';
+import { Bot, Lightbulb, X, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export function App() {
   const [data] = useState(mockData);
@@ -16,6 +15,8 @@ export function App() {
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
   const [showDemo, setShowDemo] = useState(true); // Show demo by default for new users
   const [isFirstVisit, setIsFirstVisit] = useState(true);
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Demo suggestions for users - Wayfinders pattern
   const demoQuestions = [
@@ -80,7 +81,7 @@ export function App() {
 
   // Update column visibility based on search results and filters
   useEffect(() => {
-    if (searchResult) {
+    if (searchResult && searchResult.relevantColumns) {
       setVisibleColumns(visibleColumns.map(column => ({
         ...column,
         isVisible: column.isAlwaysVisible || searchResult.relevantColumns?.includes(column.accessor) || false
@@ -100,6 +101,14 @@ export function App() {
     const result = processNaturalLanguageSearch(query, data);
     setSearchResult(result);
     setIsFirstVisit(false);
+    
+    // Add to search history
+    if (query.length > 0 && query !== searchHistory[searchHistory.length - 1]) {
+      const newHistory = [...searchHistory, query];
+      setSearchHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }
+    
     // Hide demo after first search to reduce clutter
     if (query.length > 0) {
       setShowDemo(false);
@@ -115,6 +124,29 @@ export function App() {
     handleSearch(question);
   };
 
+  // Navigation functions
+  const goBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const previousQuery = searchHistory[newIndex];
+      setSearchQuery(previousQuery);
+      const result = processNaturalLanguageSearch(previousQuery, data);
+      setSearchResult(result);
+    }
+  };
+
+  const goForward = () => {
+    if (historyIndex < searchHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const nextQuery = searchHistory[newIndex];
+      setSearchQuery(nextQuery);
+      const result = processNaturalLanguageSearch(nextQuery, data);
+      setSearchResult(result);
+    }
+  };
+
   const displayData = searchResult?.filteredData || data;
   const currentSql = generateSql(searchQuery, displayData === data ? {} : {
     attestationStatus: searchQuery
@@ -127,18 +159,32 @@ export function App() {
       <header className="bg-blue-900 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <CAQHLogo className="w-10 h-10" />
+            {/* CAQH Logo - using image file */}
+            <div className="w-10 h-10 flex items-center justify-center">
+              <img 
+                src="/Caqh_logo (1).png" 
+                alt="CAQH Logo" 
+                className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  // Fallback to SVG if image not found
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              {/* Fallback SVG Logo */}
+              <div className="w-10 h-10 bg-white rounded-lg p-2 flex items-center justify-center shadow-sm" style={{display: 'none'}}>
+                <svg viewBox="0 0 100 40" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="40" rx="4" fill="#1e40af"/>
+                  <text x="50" y="25" textAnchor="middle" fontSize="14" fontWeight="bold" fill="white" fontFamily="Arial, sans-serif">CAQH</text>
+                  <circle cx="15" cy="12" r="3" fill="#60a5fa" opacity="0.8"/>
+                  <circle cx="85" cy="28" r="2" fill="#60a5fa" opacity="0.6"/>
+                  <rect x="75" y="8" width="3" height="8" rx="1.5" fill="#60a5fa" opacity="0.7"/>
+                </svg>
+              </div>
+            </div>
             <h1 className="text-2xl font-bold">Provider Data Portal</h1>
           </div>
-          <div className="flex items-center space-x-2">
-            <button 
-              onClick={() => setShowDemo(!showDemo)}
-              className="bg-blue-800 p-2 rounded-full hover:bg-blue-700 transition-colors"
-              title="Show help and examples"
-            >
-              <span className="sr-only">Help</span>?
-            </button>
-          </div>
+          {/* Removed question mark button as requested */}
         </div>
       </header>
       <main className="container mx-auto py-6 px-4">
@@ -192,6 +238,35 @@ export function App() {
               <button onClick={() => setIsSqlModalOpen(true)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 View SQL
               </button>
+              {/* Navigation buttons */}
+              {searchHistory.length > 0 && (
+                <div className="flex space-x-1">
+                  <button
+                    onClick={goBack}
+                    disabled={historyIndex <= 0}
+                    className={`p-2 rounded-md transition-colors ${
+                      historyIndex <= 0
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    title="Go back"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={goForward}
+                    disabled={historyIndex >= searchHistory.length - 1}
+                    className={`p-2 rounded-md transition-colors ${
+                      historyIndex >= searchHistory.length - 1
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    title="Go forward"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
             
             {/* AI Search Input - Identifiers pattern */}
